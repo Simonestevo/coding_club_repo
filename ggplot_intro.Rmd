@@ -1,0 +1,207 @@
+---
+title: "Intro to Ggplot"
+author: "Simone and Alys"
+date: "28/06/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Ggplot
+
+When you begin to need more functionality than Base R plotting can give you, its time to turn to ggplot. Infintely more tweakable and incredibly well documented, with ggplot you can create sleak and paper-quality plots and graphs. 
+
+This tutorial is an introduction to ggplot with examples to get you started.
+
+### Setting up
+
+```{r load, message=TRUE, warning=FALSE}
+install.packages("ggplot2")
+library(ggplot2)
+```
+
+## Plots 101
+
+You need to:
+1. Start by calling a ggplot using `ggplot()`
+2. Specify the data using the "data" argument `ggplot(data =  )`, and the x and y variables using the aesthetics argument   `ggplot(data = , aes(x= , y = ) )`
+3. Specify  what sort of plot you make ggplot to make using a second line joing to the `ggplot()` with a `+`
+
+Lets show some examples using the cars dataset pre-loaded in R
+
+```{r data, echo=FALSE}
+# load the data
+data(iris) 
+
+# Take a look at the data
+head(iris)
+```
+For  all the ggplots with this data, the first line will look like this, with the x and y variables changing depending on what we want to plot:
+```{r set-up, echo=FALSE}
+ggplot(data = iris, aes(x = , y = ))
+```
+
+### Basic sorts of plots
+Scatter plot
+relationship between Sepal.Length and Sepal.Width
+```{r scatter, echo=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point()
+```
+
+Box plot
+relationship between Sepal.Width by the species
+```{r box, echo=FALSE}
+ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
+  geom_boxplot()
+```
+
+
+bar plot
+geom_bar
+
+line
+geom_line
+geom_trace  
+
+### Not so basic plot structure
+violin
+
+
+### Basic modifcations
+Add a title
+```{r scatter title, echo=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point()+
+  labs(title = "Sepal length by width")
+```
+
+Change the x and y labels
+```{r scatter labs, echo=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point()+
+  labs(title = "Sepal length by width", x = "Sepal length (cm)", y="Sepal width (cm)")
+```
+
+
+
+shape by group
+```{r scatter, echo=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point()
+```
+
+Lengend position
+```{r scatter, echo=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  theme(legend.position = "bottom")
+```
+
+
+colour, shape and size can change by group
+```{r scatter, echo=FALSE, warning=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, shape = Species, color = Species, size = Species)) +
+  geom_point()
+```
+
+colour by group with your choice of colours
+```{r scatter, echo=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  scale_color_manual(values=c('red','#E69F00', '#56B4E9'))
+```
+More on colour here
+scale_fill_manual -  use a bar plot to show this
+
+
+
+
+Add a regression line to see trends
+```{r scatter, echo=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  scale_color_manual(values=c('red','#E69F00', '#56B4E9')) + 
+  geom_smooth(method=lm)
+```
+
+### Customise further
+add other arguments for customisation
+
+Box plot with flipped coordinates
+```{r box flip, echo=FALSE}
+ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
+  geom_boxplot() +
+  coord_flip()
+  
+```
+
+
+Change the theme
+```{r box theme, echo=FALSE}
+ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
+  geom_boxplot() +
+  theme_bw()
+  
+```
+
+Text size and angled
+```{r text modify, echo=FALSE}
+ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
+  geom_boxplot() +
+  theme_classic() +
+  theme(text = element_text(size = 15), axis.text.x = element_text(angle = 45, hjust = 1) ) 
+  
+```
+
+
+Facetting
+```{r facet1, echo=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point() +
+  theme_bw() +
+  facet_wrap(~Species, ncol=3)
+  
+```
+
+Facetting with your own labels
+```{r facet2, echo=FALSE}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point() +
+  theme_bw() +
+  facet_wrap(~Species, ncol=1, labeller = labeller(Species =
+                                                              c("setosa" = "Iris setosa",
+                                                                "versicolor" = "Iris versicolor",
+                                                                "virginica" = "Iris virginica")))
+  
+```
+
+
+### Building  a plot up step by step
+```{r building up, echo=FALSE}
+p <- ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point()
+
+p
+
+p + theme_bw()
+p2 <- p + theme_bw()
+
+p2 + labs(main="Add title")
+  
+```
+
+### Integration with other packages
+### Building  a plot up step by step
+```{r ggplotly, echo=FALSE}
+install.packages("plotly")
+library(plotly)
+
+p <- ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point()
+
+plotly::ggplotly(p)
+  
+```
