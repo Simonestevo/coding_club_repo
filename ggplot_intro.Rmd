@@ -18,7 +18,7 @@ This tutorial is an introduction to ggplot with examples to get you started.
 ### Setting up
 
 ```{r load, message=TRUE, warning=FALSE}
-install.packages("ggplot2")
+# install.packages("ggplot2")
 library(ggplot2)
 ```
 
@@ -31,7 +31,7 @@ You need to:
 
 Lets show some examples using the cars dataset pre-loaded in R
 
-```{r data, echo=FALSE}
+```{r data}
 # load the data
 data(iris) 
 
@@ -39,116 +39,256 @@ data(iris)
 head(iris)
 ```
 For  all the ggplots with this data, the first line will look like this, with the x and y variables changing depending on what we want to plot:
-```{r set-up, echo=FALSE}
+```{r set-up}
 ggplot(data = iris, aes(x = , y = ))
 ```
 
 ### Basic sorts of plots
-Scatter plot
-relationship between Sepal.Length and Sepal.Width
-```{r scatter, echo=FALSE}
+
+One categorical variable and one continuous
+relationship between Sepal.Width by the species
+```{r cat}
+# Box Plot 
+ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
+  geom_boxplot()
+
+# Voilin plot
+ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
+  geom_violin()
+
+# Bar plot
+ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
+  geom_bar(stat = "identity")
+
+# a dot plot
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
   geom_point()
 ```
 
-Box plot
-relationship between Sepal.Width by the species
-```{r box, echo=FALSE}
-ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
-  geom_boxplot()
+
+
+
+### Add another variable
+You can display another variable on the graph too. Commonly use the colour, also can you shape or size
+
+But pay attention to the difference between color and fill. Also this is different for the type of graph 
+```{r vars}
+
+# A bubble plot with size for a continuous variable
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width,  size = Petal.Length)) +
+  geom_point(alpha = 0.5)
+
+# A bubble plot with size for a categorical variable
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width,  size = Species)) +
+  geom_point(alpha = 0.5)
+
+# Change the shape for a categorical variable
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width,  shape = Species)) +
+  geom_point()
+
+# Fill for violin on a categorical variable
+ggplot(data = iris, aes(x = Species, y = Sepal.Width, fill  = Species)) +
+  geom_violin()
+
+# Color for violin  on a categorical variable
+ggplot(data = iris, aes(x = Species, y = Sepal.Width, color  = Species)) +
+  geom_violin()
+
+# Color for point on a continuous variable
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width,  color = Sepal.Length)) +
+  geom_point()
+
+# Color for point on a categorical variable
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width,  color = Species)) +
+  geom_point()
+
+
+```
+
+You can also use mutliple of these togeher, either for the same or different variables. However, be sure that adding more is actually enhancing the point you are making with the graph, and not making it more difficult to understand.
+
+
+```{r vars2}
+
+# categorical variables
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species, shape = Species)) +
+  geom_point()
+
+# continuous variables
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Petal.Length, size = Petal.Length)) +
+  geom_point(alpha = 0.5)
+
+```
+You can also set these parameters to be constant and without being associated to a variable by not putting them into the aes() call, and instead specifying what you want it to look like.
+
+```{r}
+# Colour by a name and shape
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point(shape = 17, color  = "darkgreen")
+
+# Colour by a HEX and size
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point(alpha = 0.5, color = "#4842f5", size = 0.8)
 ```
 
 
-bar plot
-geom_bar
+### Choosing your own colours
+Load premade palettes
+```{r cols}
+# install.packages("RColorBrewer")
+# install.packages("viridisLite")
+library(RColorBrewer)
+library(viridisLite)
 
-line
-geom_line
-geom_trace  
+# To see the color palettes from RColorBrewer
+display.brewer.all()
+```
 
-### Not so basic plot structure
-violin
+When you need to "fill" for a categorical variable:
+```{r cols_fill_cat}
+# categorical variables
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point()
+
+# Colour by name or HEX
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  scale_color_manual(values = c("darkgreen", "purple", "#4842f5"))
+
+# Colour from a preloaded palette
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  scale_color_brewer(palette="Set2")
+
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  scale_color_viridis_d() # d for discrete
+
+# Grey
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  scale_color_grey()
+
+```
+
+
+When you need to "fill" for a continuous variable:
+```{r cols_fill_cont}
+# categorical variables
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Petal.Length)) +
+  geom_point()
+
+# Colour by name or HEX
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Petal.Length)) +
+  geom_point() +
+  scale_color_gradient(low="blue", high="red")
+
+# Colour from a preloaded palette
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Petal.Length)) +
+  geom_point() +
+  scale_color_gradientn(colours = rainbow(5))
+
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Petal.Length)) +
+  geom_point() +
+  scale_color_distiller(palette = "Greens") # the palette is chosen from display.brewer.all()
+
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Petal.Length)) +
+  geom_point() +
+  scale_color_viridis_c() # c for continuous
+
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Petal.Length)) +
+  geom_point() +
+  scale_color_viridis_c(option = "plasma") # choosing a palette. try "magma", or "inferno"
+
+```
+
+When you need to "color":
+```{r cols_color}
+# categorical variables
+ggplot(data = iris, aes(x = Species, y = Sepal.Width, fill = Species)) +
+  geom_boxplot()
+
+# Colour by name or HEX
+ggplot(data = iris, aes(x = Species, y = Sepal.Width, fill = Species)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("green", "pink", "#4842f5"))
+
+# Colour from a preloaded palette
+ggplot(data = iris, aes(x = Species, y = Sepal.Width, fill = Species)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette="Set2")
+
+ggplot(data = iris, aes(x = Species, y = Sepal.Width, fill = Species)) +
+  geom_boxplot() +
+  scale_fill_viridis_d()
+
+# Grey
+ggplot(data = iris, aes(x = Species, y = Sepal.Width, fill = Species)) +
+  geom_boxplot() +
+  scale_fill_grey()
+
+```
+
 
 
 ### Basic modifcations
 Add a title
-```{r scatter title, echo=FALSE}
+```{r title}
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
   geom_point()+
   labs(title = "Sepal length by width")
 ```
 
 Change the x and y labels
-```{r scatter labs, echo=FALSE}
+```{r labs}
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
   geom_point()+
   labs(title = "Sepal length by width", x = "Sepal length (cm)", y="Sepal width (cm)")
 ```
 
-
-
-shape by group
-```{r scatter, echo=FALSE}
-ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
-  geom_point()
-```
-
 Lengend position
-```{r scatter, echo=FALSE}
+```{r legend}
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
   geom_point() +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") # try "top"
 ```
-
-
-colour, shape and size can change by group
-```{r scatter, echo=FALSE, warning=FALSE}
-ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, shape = Species, color = Species, size = Species)) +
-  geom_point()
-```
-
-colour by group with your choice of colours
-```{r scatter, echo=FALSE}
-ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
-  geom_point() +
-  scale_color_manual(values=c('red','#E69F00', '#56B4E9'))
-```
-More on colour here
-scale_fill_manual -  use a bar plot to show this
-
-
 
 
 Add a regression line to see trends
-```{r scatter, echo=FALSE}
+```{r scatter}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  geom_smooth()
+
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
   geom_point() +
   scale_color_manual(values=c('red','#E69F00', '#56B4E9')) + 
-  geom_smooth(method=lm)
+  geom_smooth(method = lm)
 ```
 
 ### Customise further
 add other arguments for customisation
 
 Box plot with flipped coordinates
-```{r box flip, echo=FALSE}
+```{r box flip}
 ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
   geom_boxplot() +
   coord_flip()
   
 ```
 
-
-Change the theme
-```{r box theme, echo=FALSE}
+Change the theme to black and white
+```{r box theme}
 ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
   geom_boxplot() +
-  theme_bw()
+  theme_bw() # try theme_light, theme_dark, theme_classic,
+
+?theme_bw()
   
 ```
 
 Text size and angled
-```{r text modify, echo=FALSE}
+```{r text modify}
 ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
   geom_boxplot() +
   theme_classic() +
@@ -157,30 +297,79 @@ ggplot(data = iris, aes(x = Species, y = Sepal.Width)) +
 ```
 
 
-Facetting
-```{r facet1, echo=FALSE}
+Facetting into column
+```{r facet1}
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
   geom_point() +
   theme_bw() +
-  facet_wrap(~Species, ncol=3)
+  facet_wrap(~Species, ncol = 3) # try ncol = 1, or instead of ncol write nrow
   
 ```
 
-Facetting with your own labels
-```{r facet2, echo=FALSE}
+Facetting into rows with your own labels
+```{r facet2}
 ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
   geom_point() +
   theme_bw() +
-  facet_wrap(~Species, ncol=1, labeller = labeller(Species =
-                                                              c("setosa" = "Iris setosa",
-                                                                "versicolor" = "Iris versicolor",
-                                                                "virginica" = "Iris virginica")))
+  facet_wrap(~Species, ncol = 1,
+             labeller = labeller(Species = c("setosa" = "Iris setosa",
+                                             "versicolor" = "Iris versicolor",
+                                             "virginica" = "Iris virginica")))
   
 ```
 
+
+Breaks and grid lines
+```{r breaks}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point() +
+  scale_x_continuous(limits = c(4, 8),
+                     breaks = seq(4, 8, 1), # sequence from 0 to 8 by 1. Equivalent to 0:8
+                     minor_breaks = seq(0, 8, 0.2)
+                     )
+  
+  
+```
+
+Annotate
+```{r annotate}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  annotate("text", x = 4.5, y = 4, label = "Group 1", size = 7) +
+  annotate("text", x = 6.5, y = 3.6, label = "Group 2", color = "blue") + 
+  annotate("text", x = 5.5, y = 2, label = "Group 3") 
+  
+# Bar plot
+ggplot(data = iris, aes(x = Species, y = Sepal.Length)) +
+  geom_bar(stat = "identity") +
+    annotate("text", x = 1, y = 270, label = "*", size = 20) 
+  
+```
+
+Draw arrows
+```{r draw_lines}
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  annotate("segment", x = 4, xend = 4, y = 2.8, yend = 3.5)
+
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  annotate("text", x = 4.5, y = 4.2, label = "Important segment") +
+  annotate("segment", x = 4.1, xend = 5, y = 4, yend = 4,
+           arrow = arrow(ends = "both", angle = 90, length = unit(.2,"cm")))
+
+ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
+  geom_point() +
+  annotate("text", x = 7, y = 4.5, label = "Outliers", size = 7) + # try size = 3
+  annotate("segment", x = 7.4, xend = 7.8, y = 4.5, yend = 3.9, # try chaning these values
+           size = 1.5, # try 0.5 or 2
+           color = "darkblue", # try "green" or "purple"
+           arrow = arrow())
+  
+```
 
 ### Building  a plot up step by step
-```{r building up, echo=FALSE}
+```{r building up}
 p <- ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
   geom_point()
 
@@ -189,19 +378,38 @@ p
 p + theme_bw()
 p2 <- p + theme_bw()
 
-p2 + labs(main="Add title")
+p2 + labs(title = "Add title", subtitle = "And a sub-title", y = "Sepal width (cm)", x = "Sepal length (cm)")
   
 ```
 
+
+## Save your plot
+```{r save}
+# ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+#  geom_point()
+
+# ggsave()
+
+```
+
+
 ### Integration with other packages
 ### Building  a plot up step by step
-```{r ggplotly, echo=FALSE}
-install.packages("plotly")
+```{r ggplotly}
+# install.packages("plotly")
 library(plotly)
 
 p <- ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width)) +
   geom_point()
 
-plotly::ggplotly(p)
+ggplotly(p)
+  
+```
+Change the text for the mouse hover
+```{r ggplotly2}
+p <- ggplot(data = iris, aes(x = Sepal.Length, y = Sepal.Width, text = paste0("Sepal length: ", Sepal.Length, "cm <br>", "Sepal width: ", Sepal.Width, "cm <br>", "Petal length: ", Petal.Length, "cm <br>", "Petal width: ", Petal.Width, "cm <br>", "Species: ", Species) )) +
+  geom_point()
+
+ggplotly(p, tooltip = "text")
   
 ```
