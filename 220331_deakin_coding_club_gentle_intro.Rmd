@@ -1,0 +1,219 @@
+---
+title: "A gentle introduction to R - Deakin coding club tutorial"
+author: "Simone Stevenson"
+date: "31/03/2022"
+output:
+  pdf: default
+  html: default
+theme: hpstr
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+# Useful resources
+
+
+- Free beginners R course: https://ashavrova.com/r-course/
+- Cheat sheet for R basics: https://iqss.github.io/dss-workshops/R/Rintro/base-r-cheat-sheet.pdf 
+- Cheat sheets for everything: https://www.rstudio.com/resources/cheatsheets/ 
+- Ecology in R tutorials https://ourcodingclub.github.io/tutorials.html 
+- Tidy data tutorials https://r4ds.had.co.nz/tidy-data.html
+- Common errors and what they mean: https://ourcodingclub.github.io/tutorials/troubleshooting/ 
+
+
+# Loading your data into R
+
+To get your file path for the first time:
+
+1. Go to 'session' tab up very top of R Studio
+2. Go to 'set working directory'
+3. Go to 'choose directory'
+4. Navigate to the folder where you've saved your data and hit open
+
+    It will print out to the console (bottom left panel) something like this:
+    
+    setwd("C:/folder1/folder2/your_project_folder")
+
+5. Copy the quotation marks and everything in between them and add below to where
+   it says: "Add directory path here", eg:
+
+    basedir <- "C:/folder1/folder2/your_project_folder"
+    setwd(basedir)
+    
+6. Next time you open your code you can just run the two lines above, instead of
+   starting the working directory from session.
+
+
+## Common errors loading data
+
+- Error: Cannot change working directory - you have mispelled something in the file path
+or you haven't created the folder yet
+
+- Error: Cannot find file - you have mispelled the file name. Yes you have. OR, you've
+saved it in the wrong place, but you've probably mispelled it.
+
+- Error: Cannot open connection - either one of the above, or you are trying to access
+a folder you don't have access to (eg if you haven't logged into the VPN and
+want to use N drive)
+
+- Error: '\U' used without hex digits in character string starting ""C:\U" - 
+you've used backslashes instead of forward slashes in your file path
+
+
+```{r setting directory and loading data, include=TRUE, eval=FALSE}
+
+# Set the working directory
+
+basedir <- "Add directory path here"
+
+setwd(basedir)
+
+raw_df <- read.csv("df_ful.csv") # throws an error
+
+list.files() # 1 - checks you're looking in the right place and 2 - Gets
+# the correct spelling so you can just copy and paste it
+
+raw_df <- read.csv("df_full.csv")
+
+View(raw_df)
+
+```
+
+# Using functions and packages
+
+## Functions
+
+- Recognise functions because they will be a word (often a verb) followed by some
+brackets (eg read.csv() or mean()). Functions perform actions on data.
+
+- Information the function needs to do it's job are called 'arguments'. These
+go inside the brackets. Some arguments are essential, some of them are optional.
+
+- To find out what arguments a function needs, you can type ? + the function name
+(eg ?mean)into the console (bottom left panel) and info will pop up in the help 
+panel (bottom right). Sometimes the help is really hard to understand, so you can
+also just google the function until you find some information that is helpful.
+
+
+## Packages
+
+- Packages are like apps you install into R. Each one is a collection of functions
+to help you do something like clean data, make plots or fit models.
+
+- Looking for packages to do something? Try googling 'Cran task view' + whatever
+you're trying to do, eg 'ecological models' or 'spatial data'. They provide
+summaries of key packages for different tasks, eg:
+
+    https://cran.r-project.org/web/views/Environmetrics.html
+    
+    https://cran.r-project.org/web/views/Spatial.html
+
+
+```{r functions and packages, include=TRUE, eval=FALSE }
+
+# Functions
+
+mean(raw_df$species) # Returns NA
+
+?mean # Look at the help documentation (or just google it)
+
+mean(raw_df$species, na.rm = TRUE) # Add the na.rm argument to fix it
+
+# Load packages
+
+install.packages("tidyverse") # Only first time, use quotations!
+
+library(tidyverse) # Every time you open your script, DON'T use quotations!
+
+
+```
+
+# Dealing with NA values
+
+Useful data wrangling cheat sheet
+https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf
+
+```{r remove NA, include=TRUE, eval=FALSE}
+
+# Which columns have NA values and how many?
+
+colSums(is.na(raw_df))
+
+# Using some functions from the tidyverse package, lets see how the NAs are 
+# distributed among groups
+
+raw_df %>% # This symbol is the 'pipe', essentially means 'and then'
+  group_by(taxon) %>% # Do this - group by
+  summarise(NA_count = sum(is.na(human_background_type)),
+            NA_proportion = NA_count/n())
+
+# Remove all rows without complete data for every column
+
+df_complete <- raw_df %>% 
+               na.omit()
+
+# Check the size of your complete data vs your raw data
+nrow(raw_df)
+nrow(df_complete)
+
+```
+
+# Saving data
+
+```{r saving, include=TRUE, eval=FALSE}
+
+# The first argument is the object you want to save, the second argument is what you want to name the file
+write.csv(df_complete, "df_NA_removed.csv")
+
+```
+
+# Simple plots
+
+For a visual guide where you can select the plot then get the code for it,
+visit:
+
+https://r-graph-gallery.com/
+
+Useful base R graphics cheat sheet
+
+http://publish.illinois.edu/johnrgallagher/files/2015/10/BaseGraphicsCheatsheet.pdf
+
+```{r plot full dataset, include=TRUE, eval=FALSE}
+
+hist(raw_df$comments, 50)
+
+table(raw_df$taxon)
+
+plot(raw_df$followers, raw_df$likes)
+
+boxplot(likes ~ human_presence, data = raw_df, frame = FALSE)
+
+# We can check stack overflow for how to remove outliers from the plot
+# https://stackoverflow.com/questions/14207739/how-to-remove-outliers-in-boxplot-in-r
+
+
+# 1. Open tiff file
+tiff("220401_boxplot.tiff", units="in", width=10, height=5, res=200)
+
+# 2. Create the plot
+
+plot <- boxplot(likes ~ human_presence, data = raw_df, frame = FALSE,outline=FALSE) # Add outline argument to remove outliers
+
+# 3. Close the file
+
+dev.off()
+
+```
+
+
+
+
+
+
+
+
+
