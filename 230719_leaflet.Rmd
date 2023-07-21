@@ -3,41 +3,11 @@ title: "Leaflet tutorial"
 author: "Simone Stevenson"
 date: "19/07/2022"
 output: html_document
+self_contained: yes
 ---
 
-# TODO:
 
-- add polygpns - done
-- add points - done
-- add labels - done
-- add point labels - done
-- toggle layers - done
-- cluster points - done
-- change basemaps - done
-- change colours - done
-- geocode - done
-- save html - done
-- add rasters
-- add strings
-- Markers vs circles
-- how to share/attach data?
-- clear bounds
-- size circles?
-- aggregate num bikes by uk area
-- ordering layers
-- splitting data to add as different layers 
-- projection
-- common errors: order of layers, projection
-- not shown: leaflet.extras package search functions, 
-restricting zoom and dragging, reset map, clear bounds, fitBounds
-
-```{r clear env}
-
-rm(list = ls())
-
-```
-
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, warning=FALSE, error=FALSE, message=FALSE}
 
 # https://bookdown.org/yihui/rmarkdown/r-code.html
 
@@ -48,20 +18,29 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE,
 
 # Libraries
 
-```{r libraries}
+```{r libraries, warning=FALSE, error=FALSE, message=FALSE}
 
 if (!require(pacman)) install.packages('pacman')
 
 # Install packages as needed (after installing pacman, it will install any additional
 # packages you don't already have)
 
-pacman::p_load(tidyverse, leaflet, leaflet.extras, sf, terra, 
-               rnaturalearth, ggmap, 
-               rnaturalearthdata, spData, htmlwidgets, colorspace)
+
+pacman::p_load(tidyverse, #data wrangling
+               leaflet, leaflet.extras, # leaflet package  + extras
+               sf, # For handling polygons
+               rnaturalearth,  
+               rnaturalearthdata, # For downloading country shapefiles
+               spData, # For some data we are ging to use 
+               htmlwidgets,# to save maps
+               ggmap # for automatically pulling coords for places you know (i.e. to centre your map)
+               )
 
 ```
 
 # Load data
+
+Let's use some data from the spData package 
 
 ## lnd
 
@@ -104,7 +83,7 @@ spData: Dataset downloaded using the osmdata package representing cycle hire poi
 
 rnaturalearthdata: Polygon of the United Kingdom's boundary
 
-```{r data}
+```{r data, warning=FALSE, error=FALSE, message=FALSE, echo = FALSE}
 
 # spData: Polygons representing large administrative zones in London
 data(lnd)
@@ -129,7 +108,7 @@ uk <- ne_countries(scale = "medium", returnclass = "sf", country = "United Kingd
 
 #Static plot
 
-```{r static plot}
+```{r static plot, warning=FALSE, error=FALSE, message=FALSE}
 
 plot(st_geometry(uk))
 plot(st_geometry(lnd), add = TRUE)
@@ -137,285 +116,447 @@ plot(st_geometry(cycle_hire), add = TRUE, col = "deeppink")
 plot(st_geometry(cycle_hire_osm), add = TRUE, col = "turquoise")
 
 ```
+# Combine cycle data
 
-```{r geocode}
+You could leave them and add as separate layers but this will make things a bit simpler
 
-# To obtain an API key and enable services, go to https://mapsplatform.google.com/
+```{r combine, warning=FALSE, error=FALSE, message=FALSE, echo = FALSE}
 
-# ggmap::register_google(key = "mQkzTpiaLYjPqXQBotesgif3EfGL2dbrNVOrogg", write = TRUE) # this is a fake key
+cycle_hire_osm_temp <- cycle_hire_osm %>% 
+                       mutate(id = paste0("osm", osm_id)) %>% 
+                       rename(nbikes = capacity) %>% 
+                       dplyr::select(id, name, nbikes, geometry)
 
-mapCentre <- geocode("London Eye")
+cycle_hire_temp <- cycle_hire  %>% 
+                   dplyr::select(id, name, nbikes, geometry)
+
+cycle_hire_all <- rbind(cycle_hire_osm_temp, cycle_hire_temp) 
+
+rm(cycle_hire_temp, cycle_hire_osm_temp)
 
 ```
-
 
 
 # Add points and polygons
 
 You can zoom in manually but it's not ideal
 
-```{r basic map}
+```{r basic map, warning=FALSE, error=FALSE, message=FALSE}
 
-leaflet() %>% 
-     addTiles(group = "Basemap") %>% 
+#initialise the leaflet map
+leaflet() %>% # Use the pipe operator to add more layers to map
+  # Add a base map background - this one is the default that comes with leaflet
+     addTiles(group = "Basemap") %>%
+  # Add the polygon of the uk
      addPolygons(data = uk) %>% 
+  # Add our polygon data: lnd (london borough boundaries)
      addPolygons(data = lnd) %>% 
- addCircles(data = cycle_hire, color = "deeppink") %>%
- addCircles(data = cycle_hire_osm, color = "turquoise") 
+  # Add our points (cycle hire stations) and colour them pink
+    addCircles(data = cycle_hire_all, color = "deeppink") 
 
 ```
 
 # Centre the map
 
-```{r centre}
+To obtain a google map API key so you can use the ggmap library and geocode function, go to https://mapsplatform.google.com/ - it's really easy
 
-# To obtain an API key and enable services, go to https://mapsplatform.google.com/
+```{r centre, warning=FALSE, error=FALSE, message=FALSE}
 
+# To register your API use the commented out code below:
 # ggmap::register_google(key = "mQkzTpiaLYjPqXQBotesgif3EfGL2dbrNVOrogg", write = TRUE) # this is a fake key
 
-# Use geocode OR just get the coords from google maps
-mapCentre <- geocode("London")
+# Use geocode (OR just get the coords from google maps!)
+mapCentre <- geocode("London") # Use an address or landmark
 
 
 leaflet() %>% 
      addTiles(group = "Basemap") %>% 
      addPolygons(data = uk) %>% 
      addPolygons(data = lnd) %>% 
- addCircles(data = cycle_hire, color = "deeppink") %>%
- addCircles(data = cycle_hire_osm, color = "turquoise") %>% 
- setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10)
+ addCircles(data = cycle_hire_all, color = "deeppink") %>% 
+# Set the map centre with lat lon coordinates, set default zoom in level
+ setView(lng = mapCentre$lon, lat = mapCentre$lat, zoom = 10)
 
 ```
 
 
 # Change the basemap
 
-- providers
-- https://leaflet-extras.github.io/leaflet-providers/preview/
+- print the word 'providers' into the console (no quotation marks) to get a list of background names,
 
-```{r basemaps}
+- Or, get previews of what they look like at: https://leaflet-extras.github.io/leaflet-providers/preview/
 
-providers
+```{r basemaps, warning=FALSE, error=FALSE, message=FALSE}
 
-backGround <- "Esri.WorldStreetMap"
-
+# you can print the word providers to see all of the option names
 leaflet() %>% 
-     addProviderTiles(backGround) %>% 
-     addPolygons(data = uk) %>% 
+  # Use addProviderTiles to select a different basemap
+  # Can either put just the name in quotation marks "OpenStreetMap.Mapnik" or use the format providers$name - the latter is better if you are going to share the map with others
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
      addPolygons(data = lnd) %>% 
-     addCircles(data = cycle_hire, color = "deeppink") %>%
-     addCircles(data = cycle_hire_osm, color = "turquoise") %>% 
+     addCircles(data = cycle_hire_all, color = "deeppink") %>% 
      setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10)
 
 ```
 
-# Colour the points by a variable of interest
+# Colour data by a variable of interest
 
+```{r colour points, warning=FALSE, error=FALSE, message=FALSE}
 
-```{r colour points}
+# Create a colour palette for the variable you want colour to vary by
+# If its numeric/continuous use colorNumeric
+# This will colour our cycle hire stations by the number of bikes they hold
+cycleHirePal <- colorNumeric("inferno", domain = cycle_hire_all$nbikes, reverse = TRUE)
 
-cycleHirePal <- colorFactor("magma", domain = as.factor(cycle_hire$nbikes))
-cycleOsmPal <- colorFactor("magma", domain = as.factor(cycle_hire_osm$capacity))
+# If it is a factor use colorFactor
+# This will colour the different boroughs
 lndPal <- colorFactor("viridis", domain = as.factor(lnd$NAME))
 
 # Colour the polygons by borough and points by number of bikes available
 
 leaflet() %>% 
-     addProviderTiles(backGround) %>% 
-     addPolygons(data = uk) %>% 
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>%  
+     # Add the fill colour and opacity arguments to colour the polygons, using the colour palette you made above
      addPolygons(data = lnd, group = "NAME",
-              fillColor = ~lndPal(NAME)) %>% 
-     addCircles(data = cycle_hire, color = ~cycleHirePal(nbikes)) %>%
-     addCircles(data = cycle_hire_osm, color = ~cycleHirePal(capacity)) %>% 
+              fillColor = ~lndPal(NAME),
+              fillOpacity = 0.8) %>% 
+  # For the circles use color not fill, same as ggplot
+     addCircles(data = cycle_hire_all, color = ~cycleHirePal(nbikes)) %>% 
      setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10)
 
 # Make the borders nicer
 
 leaflet() %>% 
-     addProviderTiles(backGround) %>% 
-     addPolygons(data = uk) %>% 
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
      addPolygons(data = lnd, group = "NAME",
               fillColor = ~lndPal(NAME), 
+              fillOpacity = 0.8,
+              #Add the weight argument to make the borders thinner
               weight = 1) %>%
-     addCircles(data = cycle_hire, color = ~cycleHirePal(nbikes)) %>%
-     addCircles(data = cycle_hire_osm, color = ~cycleHirePal(capacity)) %>% 
+     addCircles(data = cycle_hire_all, color = ~cycleHirePal(nbikes)) %>%
      setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10)
 
 # Change the colour of the border when you hover over it
 
 leaflet() %>% 
-     addProviderTiles(backGround) %>% 
-     addPolygons(data = uk) %>% 
-  addPolygons(data = lnd, group = "NAME",
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
+     addPolygons(data = lnd, group = "NAME",
               fillColor = ~lndPal(NAME),
+              fillOpacity = 0.8,
+              # Add the color argument to change the border colour
               color = "white",
               weight = 1,
-              highlightOptions = highlightOptions(color='deeppink',weight=2,
+              # Use highlight options to change the apparance of a polygon if you hover your mouse
+              highlightOptions =
+                # color = border colour will change when you click
+                # weight = make it thicker
+                # bringToFront = bring the polygons to the front when you hover
+                highlightOptions(color='deeppink',weight=2,
                                                   bringToFront = TRUE)) %>% 
      addCircles(data = cycle_hire, color = ~cycleHirePal(nbikes)) %>%
-     addCircles(data = cycle_hire_osm, color = ~cycleHirePal(capacity)) %>% 
-     setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10)
+     setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10) 
 
 ```
 
 # Add popup labels
 
 
-```{r popups}
+```{r popups, warning=FALSE, error=FALSE, message=FALSE}
 
 leaflet() %>% 
-     addProviderTiles(backGround) %>% 
-     addPolygons(data = uk) %>% 
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
      addPolygons(data = lnd, group = "NAME",
               fillColor = ~lndPal(NAME),
+              fillOpacity = 0.8,
               color = "white",
               weight = 1,
               highlightOptions = highlightOptions(color='deeppink',weight=2,
                                                   bringToFront = TRUE),
+              # Add the popup argument to make more information pop up when you click on the polygon. You can paste together different values from the dataframe. The "<b>" type stuff is html code to format the text (bold, new line etc)
+              popup = ~ paste("<b>",NAME, "</b>", "<br/>", HECTARES, "hectares", sep = " ")) %>%
+     addCircles(data = cycle_hire_all, color = ~cycleHirePal(nbikes)) %>%
+     setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10)
+
+
+
+leaflet() %>% 
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>%  
+     addPolygons(data = lnd, group = "NAME",
+              fillColor = ~lndPal(NAME),
+              fillOpacity = 0.8,
+              color = "white",
+              weight = 1,
+              highlightOptions = highlightOptions(color='deeppink',weight=2),
               popup = ~ paste("<b>",NAME, "</b>", "<br/>", HECTARES, "hectares", sep = " ")) %>% 
-     addCircles(data = cycle_hire, color = ~cycleHirePal(nbikes)) %>%
-     addCircles(data = cycle_hire_osm, color = ~cycleHirePal(capacity)) %>% 
+  # Add popups to our points as well
+     addCircles(data = cycle_hire_all, color = ~cycleHirePal(nbikes),
+                      popup = ~ paste("<b>",name, "</b>", "<br/>", nbikes, "bikes", sep = " ")) %>%
      setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10)
 
 ```
 
-# Number of available bikes per hectare by borough
+# Which borough has the most bike stations, vs which has the most bikes, per hectare?
 
 
-```{r capacity of boroughs}
+```{r capacity of boroughs, warning=FALSE, error=FALSE, message=FALSE}
 
-tmp <- st_intersection(cycle_hire, lnd) %>% 
+# Intersect points with boroughs, to assign a borough name to each hire station
+tmp <- st_intersection(cycle_hire_all, lnd) %>% 
+  # For each borough (represented by name)
        group_by(NAME) %>% 
-       mutate(bikesByBorough = sum(nbikes, na.rm = TRUE),
-              bikesPerHectare = bikesByBorough/HECTARES) %>% 
-       st_drop_geometry() %>% 
-       dplyr::select(NAME, bikesByBorough, bikesPerHectare) %>% 
+  # Calculate the number of bikes, stations, and density of these things per hectare
+       mutate(numberOfBikes = sum(nbikes, na.rm = TRUE),
+              numberOfHireStations = n_distinct(id),
+              bikeDensity = numberOfBikes/HECTARES,
+              hireStationDensity = numberOfHireStations/HECTARES) %>% 
+       #Remove the spatial info from this dataframe because we will merge it with one of the others anyway
+       st_drop_geometry() %>%
+       # Select just the borough name and the new values we have calculated
+       dplyr::select(NAME, numberOfHireStations, hireStationDensity,
+                     numberOfBikes, bikeDensity) %>% 
+      # Ungroup so any further calculations aren't applied to the groups
        ungroup() %>% 
+      # Remove duplicates
        distinct()
 
+# Merge the new values into our london polygons
 lnd2 <- lnd %>% 
         merge(tmp, by = "NAME", all = TRUE) %>% 
-        mutate(bikesPerHectare = ifelse(is.na(bikesPerHectare), 0, bikesPerHectare))
+        # Convert NA to 0
+        mutate(hireStationDensity = ifelse(is.na(hireStationDensity), 0, hireStationDensity))
 
+# Remove the tmp data
 rm(tmp)
 
-lndPal2 <- colorNumeric("Greys", domain = lnd2$bikesPerHectare, alpha = FALSE)
+# Make a colour palette for the station hire density variable
+stationDensityPal <- colorNumeric("inferno", domain = lnd2$hireStationDensity, 
+                        alpha = FALSE, reverse = TRUE)
+
+# And one for the bike density per boroughs
+bikeDensityPal <- colorNumeric("inferno", domain = lnd2$bikeDensity, 
+                        alpha = FALSE, reverse = TRUE)
 
 ```
 
-```{r bike capacity map}
+```{r compare}
+
+# Make another palette for the number of bikes 
+
+bikeDensityPal <- colorNumeric("magma", domain = lnd2$bikeDensity, 
+                        alpha = FALSE, reverse = TRUE)
+
+# Make a map that shows the density of bikes in the boroughs - am I likely to find a bike at a station where I am?
 
 leaflet() %>% 
-     addProviderTiles("Esri.WorldShadedRelief") %>% 
-     addPolygons(data = uk) %>% 
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
      addPolygons(data = lnd2, group = "NAME",
-              fillColor = ~lndPal2(bikesPerHectare),
+              fillColor = ~bikeDensityPal(bikeDensity),
+              fillOpacity = 0.8,
               color = "white",
               weight = 1,
-              highlightOptions = highlightOptions(color='deeppink',weight=2,
-                                                  bringToFront = TRUE),
+              highlightOptions = highlightOptions(color='deeppink',weight=2),
               popup = ~ paste("<b>",NAME, "</b>", "<br/>", 
-                              round(bikesPerHectare,3), "bikes per hectare", 
+                              round(bikeDensity,3), "bikes per hectare", 
                               sep = " ")) %>% 
-     addCircles(data = cycle_hire, color = ~cycleHirePal(nbikes)) %>%
-     addCircles(data = cycle_hire_osm, color = ~cycleHirePal(capacity)) %>% 
-     setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10)
-
-```
-
-# Toggle data layers
-
-- data - turn off NA vals
-- basemaps
-- choose which layers show by default
-
-```{r toggle data}
-
-leaflet() %>% 
-     addProviderTiles("Esri.WorldGrayCanvas") %>% 
-     addPolygons(data = uk) %>% 
-     addPolygons(data = lnd2, group = "NAME",
-              fillColor = ~lndPal2(bikesPerHectare),
-              color = "white",
-              weight = 1,
-              highlightOptions = highlightOptions(color='deeppink',weight=2,
-                                                  bringToFront = TRUE),
-              popup = ~ paste("<b>",NAME, "</b>", "<br/>", 
-                              round(bikesPerHectare,3), "bikes per hectare", 
-                              sep = " ")) %>% 
-     addCircles(data = cycle_hire, color = ~cycleHirePal(nbikes), group = "hire points") %>%
-     addCircles(data = cycle_hire_osm, color = ~cycleHirePal(capacity), group = "hire points osm") %>% 
      setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10) %>% 
-     addLayersControl(overlayGroups = c("bikes per hectare", "hire points", "hire points osm"),
-                      position = "bottomright",
-                      options = layersControlOptions(collapsed = FALSE))  
+  # Add a legend to match our palette
+     addLegend(data = lnd2, "topright", pal = bikeDensityPal, values = ~ bikeDensity,
+    title = "Bikes per hectare",
+    opacity = 1
+  )
 
-```
+# Make the same map with station density so we can compare (how far do I have to walk to find a station?)
 
-# Split data into layers
-
-```{r split data}
-
-
-
-```
-
-
-# Cluster points
-
-```{r}
-
-
-```
-
-# Save map
-
-
-```{r}
-
-```
-
-
-# Final boss
-
-```{r final map}
-
-lndPal <- colorFactor("viridis", domain = as.factor(lnd$NAME))
-cyclePal <- colorFactor("magma", domain = as.factor(cycle_hire$nbikes))
-
-
-m <- leaflet() %>% 
-  addProviderTiles(c("Esri.WorldShadedRelief")) %>% 
-  addTiles(group = "Basemap") %>% 
-  addPolygons(data = uk) %>% 
-  addPolygons(data = lnd, group = "NAME",
-              fillColor = ~lndPal(NAME),
+leaflet() %>% 
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
+     addPolygons(data = lnd2, group = "NAME",
+              fillColor = ~stationDensityPal(hireStationDensity),
+              fillOpacity = 0.8,
+              color = "white",
               weight = 1,
-              highlightOptions = highlightOptions(color='white',weight=1,
+              highlightOptions = highlightOptions(color='deeppink',weight=2),
+              popup = ~ paste("<b>",NAME, "</b>", "<br/>", 
+                              round(hireStationDensity,3), "hire stations per hectare", 
+                              sep = " ")) %>%
+       addLegend(data = lnd2, "topright", pal = stationDensityPal, values = ~ hireStationDensity,
+        title = "Hire stations per hectare",
+        opacity = 1
+      )
+```
+
+# Add the hire stations back in
+
+```{r bike capacity map, warning=FALSE, error=FALSE, message=FALSE}
+
+leaflet() %>%
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+     addPolygons(data = lnd2, group = "NAME",
+              fillColor = ~bikeDensityPal(bikeDensity),
+              fillOpacity = 0.8,
+              color = "white",
+              weight = 1,
+              highlightOptions = highlightOptions(color='deeppink',weight=2),
+              popup = ~ paste("<b>",NAME, "</b>", "<br/>", 
+                              round(bikeDensity,3), "bikes per hectare", 
+                              sep = " ")) %>% 
+    #Use addCircleMakers instead of addCircles so we can change size
+    addCircleMarkers(data = cycle_hire_all,
+    # Add the arument 'radius' and the variable you want to size by.
+    # I think sqrt normalises your data
+    radius = ~ sqrt(nbikes),
+    stroke = FALSE, fillOpacity = 0.5,
+    fillColor = "white",
+    popup = ~ paste("<b>",name, "</b>", "<br/>", nbikes, "bikes", sep = " ")) %>% 
+    addLegend(data = lnd2, "topright", pal = bikeDensityPal, values = ~ bikeDensity,
+    title = "Bikes per hectare",
+    opacity = 1) %>% 
+    setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 12)  
+
+```
+
+# Toggle multiple data layers
+
+```{r toggle data, warning=FALSE, error=FALSE, message=FALSE}
+
+leaflet() %>% 
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
+     addPolygons(data = lnd2, group = "NAME",
+              fillColor = ~bikeDensityPal(bikeDensity),
+              fillOpacity = 0.8,
+              color = "white",
+              weight = 1,
+              highlightOptions = highlightOptions(color='deeppink',weight=2),
+              popup = ~ paste("<b>",NAME, "</b>", "<br/>", 
+                              round(bikeDensity,3), "bikes per hectare", 
+                              sep = " ")) %>% 
+    addCircleMarkers(data = cycle_hire_all,
+    radius = ~ sqrt(nbikes),
+    stroke = FALSE, fillOpacity = 0.5,
+    fillColor = "white",
+    popup = ~ paste("<b>",name, "</b>", "<br/>", nbikes, "bikes", sep = " "),
+    # Add a 'group' argument with the name you want your layer ot have when it appears on the map
+    group = "number of bikes at station") %>%
+   # Use addLayersControl to add the toggle on and off legend. Names in overlayGroups need to match the names you supplied to 'group' in the layer
+    addLayersControl(overlayGroups = c("bikes per hectare", "number of bikes at station"),
+                      position = "bottomright",
+                     # I can't remember what this argument does lol
+                      options = layersControlOptions(collapsed = FALSE))  %>%
+    addLegend(data = lnd2, "topright", pal = bikeDensityPal, values = ~ bikeDensity,
+    title = "Bikes per hectare",
+    opacity = 1) %>% 
+    setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 11)
+
+```
+
+
+
+# Toggle a single data layer
+
+```{r split data, warning=FALSE, error=FALSE, message=FALSE}
+
+# What if you want to toggle values of a single layer? You need to add them as separate layers to the map
+
+# Select all hire stations where number of bikes is unknown/NA
+hire_points_na <- cycle_hire_all %>%
+                 filter(is.na(nbikes))
+
+# Select ones where it is known
+hire_points <- cycle_hire_all %>%
+                 filter(!is.na(nbikes))
+
+
+bikeMap <- leaflet() %>% 
+     addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
+     addPolygons(data = lnd2, group = "NAME",
+              fillColor = ~bikeDensityPal(bikeDensity),
+              fillOpacity = 0.8,
+              color = "white",
+              weight = 1,
+              highlightOptions = highlightOptions(color='deeppink',weight=2),
+              popup = ~ paste("<b>",NAME, "</b>", "<br/>", 
+                              round(bikeDensity,3), "bikes per hectare", 
+                              sep = " ")) %>% 
+  # Add points where nbikes is known
+    addCircleMarkers(data = hire_points,
+    radius = ~ sqrt(nbikes),
+    stroke = FALSE, fillOpacity = 0.5,
+    fillColor = "white",
+    popup = ~ paste("<b>",name, "</b>", "<br/>", nbikes, "bikes", sep = " "),
+    group = "number of bikes at station") %>%
+    addLayersControl(overlayGroups = c("bikes per hectare", "number of bikes at station"),
+                      position = "bottomright",
+                      options = layersControlOptions(collapsed = FALSE))  %>%
+  # Add the NA values separately
+    addCircleMarkers(data = hire_points_na,
+    radius = ~ sqrt(nbikes),
+    stroke = FALSE, fillOpacity = 0.5,
+    fillColor = "black",
+    popup = ~ paste("<b>",name, "</b>", "<br/>", nbikes, "bikes", sep = " "),
+    group = "stations without bikes") %>%
+  # Make sure you add each layer to you layer control tool
+    addLayersControl(overlayGroups = c("bikes per hectare", "number of bikes at station", "stations without bikes"),
+                      position = "bottomright",
+                      options = layersControlOptions(collapsed = FALSE))  %>%
+    addLegend(data = lnd2, "topright", pal = bikeDensityPal, values = ~ bikeDensity,
+    title = "Bikes per hectare",
+    opacity = 1) %>% 
+    setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 11)
+
+bikeMap
+
+```
+
+
+# Find a bike station
+
+```{r clusters, warning=FALSE, error=FALSE, message=FALSE}
+
+# Maybe we actually need to find a bike station and the map above isn't very useful
+
+clusterMap <- leaflet() %>% 
+  # Add a basemap that includes street names
+     addProviderTiles(providers$OpenStreetMap.Mapnik) %>% 
+     addPolygons(data = lnd2, group = "NAME",
+              fillColor = ~stationDensityPal(hireStationDensity),
+              fillOpacity = 0.4,
+              color = "white",
+              weight = 1,
+              highlightOptions = highlightOptions(color='deeppink',weight=2,
                                                   bringToFront = TRUE),
-              popup = ~ paste("<b>",NAME, "</b>", "<br/>", HECTARES, "hectares", sep = " ")) %>% 
- # addCircles(data = cycle_hire, group = "area", color = ~cyclePal(nbikes)) %>%
- # addCircleMarkers(data = cycle_hire, label = ~ nbikes, radius = 2) %>%
- # addLayersControl(baseGroups = c("Basemap"),
- #                  overlayGroups = c("Angel", "Hyde Park","All"),
- #                  position = "bottomright",
- #                  options = layersControlOptions(collapsed = FALSE))  %>%
-  # hideGroup(c("All"))
-  addCircleMarkers(data = cycle_hire, color = "deeppink",
-             weight = 2, clusterOptions = markerClusterOptions(), group = "other") %>%
-  addCircleMarkers(data = cycle_hire_osm, color = "turquoise",
-                   weight = 2, clusterOptions = markerClusterOptions(), group = "osm") %>%
-  addLayersControl(baseGroups = c("Basemap", "Esri.WorldShadedRelief"),
-                   overlayGroups = c("osm", "other"),
-                   position = "bottomright",
-                   options = layersControlOptions(collapsed = FALSE))  %>% 
-  setView(lng = -0.11980, lat = 51.50394,zoom = 10) %>%  # Can use fitBounds instead using extent corners
-  #setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10) # Can use fitBounds instead using extent corners
-#clearBounds()
-  addSearchFeatures(targetGroups = "other",options = searchFeaturesOptions(zoom = 10) )
+              popup = ~ paste("<b>",NAME, "</b>", "<br/>", 
+                              round(hireStationDensity,3), "bikes per hectare", 
+                              sep = " ")) %>% 
+     addCircleMarkers(data = hire_points, color = ~cycleHirePal(nbikes),
+                popup = ~ paste("<b>",name, "</b>", "<br/>", nbikes, "bikes", 
+                                sep = " "),
+                group = "number of bikes for hire",
+                # Add this cluster options argument to cluster points together until you zoom in
+                clusterOptions = markerClusterOptions()) %>%
+     addCircleMarkers(data = hire_points_na, color = "darkgrey",
+                popup = ~ paste("<b>",name, "</b>", "<br/>", nbikes, "bikes", 
+                                sep = " "),
+                group = "capacity unknown",
+                clusterOptions = markerClusterOptions()) %>%
+     setView(lng = mapCentre$lon, lat = mapCentre$lat,zoom = 10) %>% 
+     addLayersControl(overlayGroups = c("bikes per hectare", "number of bikes for hire", 
+                                        "capacity unknown"),
+                      position = "bottomright",
+                      options = layersControlOptions(collapsed = FALSE))  %>% 
+  # If you want a layer to be clicked off as the default, hide it like this, then the user has ot choose to click it on
+     hideGroup(c("capacity unknown"))
 
-m
+clusterMap
 
-saveWidget(m, file=paste0( getwd(), "/londonCycling.html"))
+```
+
+# Save maps
+
+
+```{r save, warning=FALSE, error=FALSE, message=FALSE}
+
+saveWidget(bikeMap, file=paste0( getwd(), "/londonBikeMap.html"))
+
+saveWidget(clusterMap, file=paste0( getwd(), "/londonCyclingClusterMap.html"))
+
 ```
 
