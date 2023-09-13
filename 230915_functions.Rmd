@@ -223,6 +223,36 @@ replace_na(NA)
 
 ```
 
+# Add documentation
+
+```{r document}
+
+#' Replace NA Values in a Vector
+#'
+#' This function replaces NA values in a vector with a specified replacement value.
+#'
+#' @param x A vector containing elements with possible NA values.
+#' @param replace The value to replace NA values with.
+#' @return A new vector with NA values replaced by the specified replacement value.
+#'
+#' @examples
+#' x <- c(1, NA, 3, NA, 5)
+#' result <- replace_na(x, 0)
+#' result
+#'
+#' @export
+
+replace_na <- function(x, replace) {
+  
+  # Continue with function
+  ifelse(is.na(x), replace, x) 
+  
+}
+
+replace_na(NA, "wrong")
+
+```
+
 # Add a check to the input arguments 
 
 This is called an assertion, there are lots of shortcut packages to make writing
@@ -263,6 +293,10 @@ replace_na(NA, "wrong")
 
 ```
 
+
+
+
+
 # Write the body of this function
 
 ```{r write body}
@@ -277,6 +311,8 @@ divide_things <- function(x, n){
 # Write a full function - signature and body
 
 Write a function to take the mean of a vector, then add a value to it
+
+Add the roxygen documentation as well
 
 ```{r write function}
 
@@ -418,6 +454,18 @@ plot_histogram <- function(data, x_variable, color, bins = 20, title) {
     )
 }
 
+# Now we can apply the function to completely different columns 
+
+vers_sepal_width <- plot_histogram(versicolor_data, Sepal.Width, "turquoise", 10, "Versicolor sepal width")
+
+vers_petal_length <- plot_histogram(versicolor_data, Petal.Length, "purple2", 10, "Versicolor petal length")
+
+grid.arrange(vers_sepal_width, vers_petal_length, ncol = 2)
+
+# Or even datasets
+
+plot_histogram(mtcars, mpg, "pink", 10, "Miles per gallon")
+
 ```
 
 Here's another example for selecting columns
@@ -438,6 +486,7 @@ get_max(iris, Sepal.Length)
 get_max(mtcars, mpg)
 
 ```
+
 # Have a go at using the double curly braces to finish this function
 
 ```{r curly try}
@@ -450,40 +499,94 @@ add_ten_to_column <- function(data, column_name) {
 }
 
 new_iris <- add_ten_to_column(iris, ____ )
-```
 
-
-```{r plot sepal width}
-
-plot_histogram(versicolor_data, Sepal.Width, "turquoise", 10, "Versicolor sepal width")
-
-plot_histogram(mtcars, mpg, "pink", 10, "Miles per gallon")
+head(new_iris)
 
 ```
 
-```{r add stuff}
+# Convert code into a function
 
-# Add some bells and whistles
-## Text size
-## Background colour
-## bar outline
-## theme
+You can follow these steps to convert your existing code into a function:
 
-plot_fancy_histogram <- function(data, x_variable, color, bins = 20, title) {
-  ggplot(data, aes(x = {{ x_variable }})) +
-    geom_histogram(fill = color, color = "black", bins = bins) +
-    labs(
-      title = title,
-      x = deparse(substitute(x_variable)),
-      y = "Frequency"
-    ) 
+1. Create the template with function name, signature and body
+2. Paste the script into the body
+3. Choose which parts of your script should be the arguments
+4. Replace specific values with argument names
+5. Make specific variable names more general
+6. Remove the final assignment of your output to an object
+
+There are also shortcuts I will show you a bit later :)
+
+Turn this code into a function that just takes a dataset, and a character value
+from the column egg_group_1 as its arguments.
+
+```{r make this code into a function}
+
+# Filter the dataset for "monster" in egg_group_1
+monster_pokemon <- pokemon %>%
+  filter(egg_group_1 == "monster")
+
+summary_table <- monster_pokemon %>% 
+                 summarise(egg_group_1 = "monster",
+                           species_count = n_distinct(pokemon),
+                           mean_height = mean(height, na.rm = TRUE),
+                           max_speed = max(speed, na.rm = TRUE))
+
+# Print the table
+summary_table
+
+```
+
+
+```{r pokemon function}
+
+summarise_pokemon <- function(){
+  
 }
 
-plot_fancy_histogram(mtcars, mpg, "pink", 10, "Miles per gallon")
+summarise_pokemon(pokemon, "monster")
+
+summarise_pokemon(pokemon, "bug")
 
 ```
 
-# Use a loop
+# Now add roxygen documentation
+
+```{r pokemon documentation}
+
+```
+
+# Extra challenge 1 - select columns
+
+Make the same function, except in this one, you can select different columns
+to take the mean and speed of, then name them accordingly
+
+```{r fancy summary}
+
+fancy_summary <- function(data, group, mean_var, max_var, mean_name, max_name){
+  
+  group_data <- ____ %>% 
+                filter(egg_group_1 == ____ )
+  
+  summary_table <- group_data %>%
+                   summarise(egg_group_1 = ____,
+                             species_count = n_distinct(pokemon),
+                             ____ ,
+                             ____ )
+
+  names(summary_table) <- c("egg_group_1", "species_count", ___ , ___ )
+
+  # Print the table
+  summary_table
+  
+}
+
+fancy_summary()
+
+```
+
+
+# Extra challenge 2 - use a loop
 
 ```{r loop}
 
@@ -496,12 +599,12 @@ plots_list <- list()
 # Loop through each species dataframe
 for (i in seq_along(iris_species_list)) {
   
-  species_data <- iris_species_list[[i]]
-  color <- species_colors[i]
-  title <- paste(species_names[i], "Sepal Width Histogram")
+  species_data <- ____[[i]]
+  color <- ____[i]
+  title <- paste(____[i], "Sepal Width Histogram")
   
   # Create the plot and store it in the list
-  plots_list[[i]] <- plot_fancy_histogram(species_data, 
+  ____[[i]] <- plot_histogram(species_data, 
                                     x_variable = Sepal.Width, 
                                     color = color, 
                                     bins = 10,
@@ -514,96 +617,5 @@ grid.arrange(grobs = plots_list, ncol = 3)
 
 ```
 
-# Convert code into a function
 
-```{r make this code into a function}
-
-# Filter the dataset for "monster" in egg_group_1
-monster_pokemon <- pokemon %>%
-  filter(egg_group_1 == "monster")
-
-# Calculate the number of species, average height, average weight, and average speed
-species_count <- nrow(monster_pokemon)
-average_height <- mean(monster_pokemon$height, na.rm = TRUE)
-average_weight <- mean(monster_pokemon$weight, na.rm = TRUE)
-average_speed <- mean(monster_pokemon$speed, na.rm = TRUE)
-
-# Get the "egg_group_1" value (assuming it's the same for all rows in the filtered dataset)
-egg_group_1_value <- unique(monster_pokemon$egg_group_1)
-
-# Create a data frame with the calculated values and "egg_group_1" value
-summary_data <- data.frame(
-  "Egg Group 1" = egg_group_1_value,
-  Species = species_count,
-  `Average Height (m)` = average_height,
-  `Average Weight (kg)` = average_weight,
-  `Average Speed` = average_speed
-)
-
-# Create the kable table
-summary_table <- kable(summary_data, format = "html", escape = FALSE) %>%
-  kable_styling(full_width = FALSE) %>%
-  row_spec(0, bold = TRUE) %>%
-  row_spec(1, background = "lavender") %>%
-  row_spec(1, color = "black")
-
-# Print the table
-summary_table
-
-```
-
-
-```{r pokemon function}
-
-# Function to generate a summary table for a specific egg group
-generate_summary_table <- function(data, group, 
-                                   font_size = 12, background_color = "lavender") {
-  # Filter the dataset for the specified egg group
-  egg_group_pokemon <- data %>%
-    filter(egg_group_1 == group)
-  
-  # Calculate the number of species, average height, average weight, and average speed
-  species_count <- nrow(egg_group_pokemon)
-  average_height <- mean(egg_group_pokemon$height)
-  average_weight <- mean(egg_group_pokemon$weight)
-  average_speed <- mean(egg_group_pokemon$speed)
-  
-  # Get the egg_group_name (assuming it's the same for all rows in the filtered dataset)
-  egg_group_value <- unique(egg_group_pokemon$egg_group_1)
-  
-  # Create a data frame with the calculated values and egg_group_name
-  summary_data <- data.frame(
-    "Egg Group 1" = egg_group_value,
-    Species = species_count,
-    `Average Height (m)` = average_height,
-    `Average Weight (kg)` = average_weight,
-    `Average Speed` = average_speed
-  )
-  
-  # Create the kable table with specified font and background
-  summary_table <- kable(summary_data, format = "html", escape = FALSE) %>%
-    kable_styling(full_width = FALSE, font_size = font_size) %>%
-    row_spec(0, bold = TRUE) %>%
-    row_spec(1, background = background_color) %>%
-    row_spec(1, color = "black")
-  
-  return(summary_table)
-}
-
-# Example usage:
-# Generate a summary table for the "monster" egg group with custom font and background color
-generate_summary_table(pokemon,"monster", font_size = 14, background_color = "lightblue")
-
-generate_summary_table(pokemon,"bug", font_size = 14, background_color = "orange")
-
-```
-
-```{r use R}
-
-summarise_pokemon <- function(monster_pokemon, height, speed) {
-  summary <- monster_pokemon %>% 
-             summarise(mean_h = mean(height, na.rm = TRUE),
-                       mean_speed = mean(speed, na.rm = TRUE))
-}
-```
 
