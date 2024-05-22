@@ -17,36 +17,91 @@ self_contained: yes
 
 
 
-# Arguments
 
-Arguments are the bits of code that aren't duplicated across your repeating code
-(Make this into an example where species is an input)
+# Libraries
 
-Number of arguments technically unlimited but more == difficult to debug
+```{r libraries, warning=FALSE, error=FALSE, message=FALSE}
 
-- data arguments (what are you changing)
-- detail arguments (how are you doing it)
+library(tidyverse) # wrangle data
+library(gridExtra) # display multiple plots
+library(pokemon) # loads pokemon data
+library(kableExtra) # makes nice tables
 
-data args should go first
-Get people to sort arguments from a common function into types
+```
 
-Setting default values to your argument (eg look at median)
 
-Using ... to include arguments to other functions within you function (eg if it uses mean)
 
-# Naming functions
+```{r code that could be a function}
 
-Variable or objects are nouns (eg df), functions are verbs (filter)
+# See how these three chunks of code are identical except for the species name in filter?
+setosa_summary1 <- iris %>% 
+               filter(Species == "setosa") %>% 
+               summarise(mean_sepal_length = mean(Sepal.Length),
+                         mean_sepal_width = mean(Sepal.Width),
+                         mean_petal_length = mean(Petal.Length),
+                         mean_petal_width = mean(Petal.Width))
+
+versicolor_summary1 <- iris %>% 
+                   filter(Species == "versicolor") %>% 
+                   summarise(mean_sepal_length = mean(Sepal.Length),
+                             mean_sepal_width = mean(Sepal.Width),
+                             mean_petal_length = mean(Petal.Length),
+                             mean_petal_width = mean(Petal.Width))
+
+virginica_summary1 <- iris %>% 
+                  filter(Species == "virginica") %>% 
+                  summarise(mean_sepal_length = mean(Sepal.Length),
+                             mean_sepal_width = mean(Sepal.Width),
+                             mean_petal_length = mean(Petal.Length),
+                             mean_petal_width = mean(Petal.Width))
+
+setosa_summary1
+
+```
+
+```{r convert to function}
+
+# We can write a function to cut down the repeating code.
+
+get_species_summary <- function(name) {
+  
+  iris %>% 
+  filter(Species == name) %>% 
+  summarise(mean_sepal_length = mean(Sepal.Length),
+                             mean_sepal_width = mean(Sepal.Width),
+                             mean_petal_length = mean(Petal.Length),
+                             mean_petal_width = mean(Petal.Width),
+            Species = name)
+}
+
+setosa_summary <- get_species_summary("setosa")
+
+versicolor_summary <- get_species_summary("versicolor")
+
+virginica_summary <- get_species_summary("virginia")
+
+# And if we want to change something, like add a group column, we only need
+# to change our code in one place instead of 3
+
+setosa_summary
+
+```
+# Tips and tricks
+## Naming functions
+
+- Variable or objects are nouns (eg df), functions are usually verbs (eg filter)
 
 Best practice to include verbs in a function - can you think of examples that don't
 follow this practice?
 
-understanding code more important than quick typing
+Understanding code is more important than quick typing, so pick a coherent name 
+for your function
 
-# Organising functions in your code
- put em up top
- source
- R markdown - need to go in their own chunk
+## Organising functions in your code
+
+- put em up top
+- source
+- R markdown - need to go in their own chunk
 
 # Outputs
 
@@ -54,21 +109,8 @@ Functions return the final value so you can assign outside
 
 # Naming arguments
 
-General
-
-
-# Libraries
-
-```{r libraries, warning=FALSE, error=FALSE, message=FALSE}
-
-library(tidyverse) # wrangle data
-library(ggplot2) # make plots
-library(gridExtra) # display multiple plots
-library(pokemon) # loads pokemon data
-library(kableExtra) # makes nice tables
-
-```
-
+Be very general - use 'df' not 'yarra_site_1', for example
+Try not to use names that are not already function names (eg mean, sample)
 
 # Write a function template
 
@@ -97,13 +139,23 @@ add_ten <- function(x) { #open brackets
 
 add_ten(10)
 
+add_ten(100)
+
 ```
 
 
-# Using existing functions
+# Arguments
+
+Arguments are the bits of code that aren't duplicated across repeating code (for example
+different vectors you want to take the mean of, different dataframes for 
+different sampling sites, or species names like in the first example). These go inside
+the parentheses in the function's signature.
+
+Number of arguments technically unlimited but more == difficult to debug
+
+## Let's start by examining arguments of functions we already know
 
 How do we know what arguments a function takes? Let's look at the function 'cor'
-
 
 
 ```{r gets args}
@@ -150,7 +202,7 @@ args(median)
 median(TRUE, x = iris$Sepal.Length)
 
 # How else might we do it?
-median()
+median(iris$Sepal.Length, na.rm = TRUE)
 
 ```
 
@@ -160,10 +212,12 @@ median()
 
 multiply_things <- function(x, multiplier) { #open brackets
   
-  x * # what goes here?
+  x * multiplier # what goes here?
   
   
 }
+
+multiply_things(10,5)
 
 ```
 
@@ -171,7 +225,7 @@ multiply_things <- function(x, multiplier) { #open brackets
 
 ```{r arg signature}
 
-subtract_things <- function(,){
+subtract_things <- function(x,y){
   
 x - y
   
@@ -211,7 +265,7 @@ add_things_fancy(10)
 
 ```{r add ur own default}
 
-replace_na <- function(x, replace) {
+replace_na <- function(x, replace = 0) {
   
   ifelse(is.na(x), replace, x) 
   
@@ -265,7 +319,7 @@ all those annoying error messages in your console are born)
 
 add_things <- function(x, n = 5){
 
-if(!is.numeric(x)) {stop("error, x needs to be numeric")}
+if(!is.numeric(x)) {stop("wrong")}
   
 x + n
   
@@ -294,17 +348,17 @@ replace_na(NA, "wrong")
 ```
 
 
-
-
-
 # Write the body of this function
 
 ```{r write body}
 
 divide_things <- function(x, n){
   
- 
+ x/n
+  
 }
+
+divide_things(9,3)
 
 ```
 
@@ -316,11 +370,14 @@ Add the roxygen documentation as well
 
 ```{r write function}
 
-add_to_mean <- function() {
+add_to_mean <- function(x,y, ...) {
   
-  
+  mean(x, ...) + y
   
 }
+
+add_to_mean(c(1,2,3,NA), 100, na.rm = TRUE)
+
 ```
 
 # Make some plots
@@ -329,18 +386,19 @@ Functions don't just take individual values, or return numbers.
 
 Perhaps you want to make an identical plot for each of your sampling sites or species?
 
-## Here is a simple function to make a histogram of the sepal length column in
+Here is a simple function to make a histogram of the sepal length column in
 the iris dataframe
 
 ```{r histo}
 
-summary(iris) # Have a quick look at our data
+summary(iris) # Have a quick look at our df
 
-plot_sepal_length_hist  <- function(data) {
+plot_sepal_length_hist  <- function(df) {
  
-   ggplot(data, # The dataframe our column is in
-          aes(x = Sepal.Length)) + # Look at the distribution of values in the sepal length column
-    geom_histogram() # We want our plot to be a histogram
+   ggplot(df, # The dataframe our column is in
+          aes(x = df$Sepal.Length)) + # Look at the distribution of values in the sepal length column
+      geom_histogram(color = "black",
+          fill = "lightblue") # We want our plot to be a histogram
   
 }
 
@@ -348,87 +406,29 @@ plot_sepal_length_hist(iris)
 
 ```
 
-## Custom color
-
 Add an argument to the function that allows us to change the colour of the bars
 
-```{r add color}
-
-plot_sepal_length_hist <- function(data, ___ ) {
-  
-  ggplot(data, aes(x = Sepal.Length)) +
-  geom_histogram(fill = ___ , 
-                   color = "black")
-  
-}
-
-```
-
-## Custom bins
+BONUS CHALLENGE, you could also:
 
 Add an argument to the function that lets us change how many bins to use
 
-```{r bins}
-
-plot_sepal_length_hist  <- function(data, color, ___ ) {
-  
-  ggplot(data, aes(x = Sepal.Length)) +
-    geom_histogram(fill = color, 
-                   color = "black", 
-                   bins = ___ )
-}
-
-```
-
-## Add title
-
 Add an argument to the function that lets us add a title
 
-```{r title}
+```{r histo colors}
 
-plot_sepal_length_hist  <- function(data, color, bins, ___ ) {
+plot_sepal_length_hist  <- function(df, colour = "lightblue") {
+ 
+   ggplot(df, # The dataframe our column is in
+          aes(x = df$Sepal.Length)) + # Look at the distribution of values in the sepal length column
+      geom_histogram(color = "black",
+          fill = colour ) # We want our plot to be a histogram
   
-  ggplot(data, aes(x = Sepal.Length)) +
-    geom_histogram(fill = color, color = "black", bins = bins) +
-    labs(
-      title = ___,
-      x = "Sepal Length (mm)",
-      y = "Frequency"
-    )
 }
-```
 
-## Make multiple plots
-
-```{r spp data}
-
-# Split the iris dataset into separate dataframes for each species
-setosa_data <- iris %>% filter(Species == "setosa")
-versicolor_data <- iris %>% filter(Species == "versicolor")
-virginica_data <- iris %>% filter(Species == "virginica")
+plot_sepal_length_hist(iris, "turquoise")
 
 ```
-
-```{r sepal length plots}
-# Create separate plots for each species
-plot_setosa <- plot_sepal_length_hist(setosa_data,  
-                              color = "purple1", bins = 30,
-                              title = "Setosa Sepal Width Histogram")
-
-
-plot_versicolor <-  plot_sepal_length_hist(versicolor_data,  
-                              color = "coral", bins = 30,
-                                  title = "Versicolor Sepal Width Histogram")
-
-plot_virginica <-  plot_sepal_length_hist(versicolor_data,  
-                              color = "lavender", bins = 30,
-                                 title = "Virginica Sepal Width Histogram")
-
-grid.arrange(plot_setosa, plot_versicolor, plot_virginica, ncol = 3)
-
-```
-
-## How to specify column names as arguments
+# How to specify column names as arguments
 
 What if we don't want to plot Sepal Length? Maybe we want to plot Sepal Width
 
@@ -440,15 +440,14 @@ This can make a function a lot more widely applicable in some contexts
 ```{r more general histogram function}
 
 # Function to plot histograms for any variable
-plot_histogram <- function(data, x_variable, color, bins = 20, title) {
+plot_histogram <- function(df, x_variable, col) {
   
   # Because ggplot (and other tidyverse functions) don't use quotation marks,
   # we need to wrap our argument that specifies a column name in double curly braces
   
-  ggplot(data, aes(x = {{ x_variable }})) + 
-    geom_histogram(fill = color, color = "black", bins = bins) +
+  ggplot(df, aes(x = {{ x_variable }})) + 
+    geom_histogram(fill = col, color = "black") +
     labs(
-      title = title,
       x = deparse(substitute(x_variable)),
       y = "Frequency"
     )
@@ -456,15 +455,15 @@ plot_histogram <- function(data, x_variable, color, bins = 20, title) {
 
 # Now we can apply the function to completely different columns 
 
-vers_sepal_width <- plot_histogram(versicolor_data, Sepal.Width, "turquoise", 10, "Versicolor sepal width")
+sepal_width <- plot_histogram(iris, Sepal.Width, "pink")
 
-vers_petal_length <- plot_histogram(versicolor_data, Petal.Length, "purple2", 10, "Versicolor petal length")
+petal_length <- plot_histogram(iris, Petal.Length, "lightblue")
 
-grid.arrange(vers_sepal_width, vers_petal_length, ncol = 2)
+grid.arrange(sepal_width, petal_length, ncol = 2)
 
 # Or even datasets
 
-plot_histogram(mtcars, mpg, "pink", 10, "Miles per gallon")
+plot_histogram(mtcars, mpg, "green4")
 
 ```
 
@@ -472,11 +471,11 @@ Here's another example for selecting columns
 
 ```{r select a column}
 
-get_max <- function(data, column_name){
+get_max <- function(df, column_name){
   
-  data %>% 
-    select({{variable_name}}) %>% 
-    filter({{variable_name}} == max({{variable_name}})) %>% 
+  df %>% 
+    select({{column_name}}) %>% 
+    filter({{column_name}} == max({{column_name}})) %>% 
     pull(.)
   
 }
@@ -491,9 +490,9 @@ get_max(mtcars, mpg)
 
 ```{r curly try}
 
-add_ten_to_column <- function(data, column_name) {
+add_ten_to_column <- function(df, column_name) {
   
-  data %>% 
+  df %>% 
     mutate(new_column = ____ + 10)
 
 }
@@ -522,29 +521,43 @@ from the column egg_group_1 as its arguments.
 
 ```{r make this code into a function}
 
-# Filter the dataset for "monster" in egg_group_1
-monster_pokemon <- pokemon %>%
-  filter(egg_group_1 == "monster")
-
-summary_table <- monster_pokemon %>% 
-                 summarise(egg_group_1 = "monster",
-                           species_count = n_distinct(pokemon),
-                           mean_height = mean(height, na.rm = TRUE),
-                           max_speed = max(speed, na.rm = TRUE))
-
-# Print the table
-summary_table
+cheat_pokemon_function <- function(pokemon, egg_group_1) {
+  # Filter the dataset for "monster" in egg_group_1
+  monster_pokemon <- pokemon %>%
+    filter(egg_group_1 == "monster")
+  
+  summary_table <- monster_pokemon %>% 
+                   summarise(egg_group_1 = "monster",
+                             species_count = n_distinct(pokemon),
+                             mean_height = mean(height, na.rm = TRUE),
+                             max_speed = max(speed, na.rm = TRUE))
+  
+  # Print the table
+  summary_table
+}
 
 ```
 
 
 ```{r pokemon function}
 
-summarise_pokemon <- function(){
+summarise_pokemon <- function(x, egg_group_name){
   
+  # Filter the dataset for "monster" in egg_group_1
+monster_pokemon <- x %>%
+  filter(egg_group_1 == egg_group_name)
+
+monster_pokemon %>% 
+                 summarise(egg_group_1 = egg_group_name,
+                           species_count = n_distinct(pokemon),
+                           mean_height = mean(height, na.rm = TRUE),
+                           max_speed = max(speed, na.rm = TRUE))
+
+
 }
 
 summarise_pokemon(pokemon, "monster")
+
 
 summarise_pokemon(pokemon, "bug")
 
@@ -563,7 +576,7 @@ to take the mean and speed of, then name them accordingly
 
 ```{r fancy summary}
 
-fancy_summary <- function(data, group, mean_var, max_var, mean_name, max_name){
+fancy_summary <- function(df, group, mean_var, max_var, mean_name, max_name){
   
   group_data <- ____ %>% 
                 filter(egg_group_1 == ____ )
@@ -589,6 +602,18 @@ fancy_summary()
 # Extra challenge 2 - use a loop
 
 ```{r loop}
+
+# Split data by species
+
+setosa_data <- iris %>% 
+               filter(Species == "setosa") 
+
+versicolor_data <- iris %>% 
+                   filter(Species == "versicolor")
+
+virginica_data <- iris %>% 
+                  filter(Species == "virginica") 
+
 
 iris_species_list <- list(setosa_data, versicolor_data, virginica_data)
 species_colors <- c("purple1", "coral", "lavender")
