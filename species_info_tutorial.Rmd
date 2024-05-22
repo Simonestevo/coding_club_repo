@@ -1,0 +1,367 @@
+---
+title: "Intro to species information packages"
+author: "Simone Stevenson"
+date: "28/07/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Species packages
+
+There are multiple R packages available for accessing biodiversity data, including:
+Taxonomic information, ecological traits, distribution, occurrence points, conservation
+status etc. These become particularly useful when you need data for a list of
+different species, although you cannot guarantee the same data will be
+available for each species.  Therefore the code below may not work for every 
+species you try it on.
+
+With the exception of Galah, the packages below were all developed by someone
+called Scott Chamberlain.  Therefore they work in very similar ways so if you 
+learn one, you can probably figure the others out too. 
+
+NOTE: Nearly all databases return objects in the form of lists that you then 
+need to subset to get the information you need. Getting familiar with lists and 
+how to subset them is probably a good idea if you want to use any of these 
+packages
+
+### Setting up
+
+```{r packages, echo=FALSE, message = FALSE, warning = TRUE}
+
+# set directory
+
+basedir <- "C:/Users/ssimone/OneDrive - Deakin University/Coding_club/231124_simone_spp_data"
+setwd(basedir)
+
+# load packages
+
+## for data wrangling + ggplot
+# install.packages("tidyverse")
+library(tidyverse)
+
+## for getting species info
+# install.packages("taxize")
+library(taxize)
+# install.packages("rgbif")
+library(rgbif)
+# install.packages("galah")
+library(galah)
+# install.packages("rredlist")
+library(rredlist)
+# install.packages("rfishbase")
+# library(rfishbase)
+
+# for mapping
+# install.packages("sf")
+library(sf)
+# install.packages("rnaturalearth")
+library(rnaturalearth)
+# install.packages("rnaturalearthdata")
+library(rnaturalearthdata)
+
+```
+
+# Species information inputs
+
+```{r species, message=TRUE, warning=FALSE}
+
+# Load your species name here. Some packages will also take a list of species.
+# For others you would need to use an apply function or a loop.
+
+spp_name <- "Carcharodon carcharias"
+spp_name
+
+# If you're not sure how to pronounce Carcharodon carcharius like I wasn't,
+# youtube is your friend https://www.youtube.com/watch?v=yqwonwErTNc&ab_channel=OCEARCH
+
+```
+
+# taxize
+
+Taxize is a package that lets you check for species taxonomic information and
+whether your species has synonyms - that is, is it/has it been known by multiple
+different scientific names. If it has, you may want to search all known synonyms
+when looking to download data from species databases.
+
+Citation:
+Chamberlain, S. A., & Szöcs, E. (2013). taxize: taxonomic search and retrieval in R. F1000Research, 2.
+
+```{r taxized}
+
+# Get the unique taxonomic serial number for your species
+
+spp_id <- get_tsn(spp_name)
+
+# Get a list of its synonyms
+synonyms_list <- synonyms(spp_id, db = "itis")
+
+# Turn into a nice dataframe
+
+spp_synonyms_df <- do.call(rbind, synonyms_list)
+spp_synonyms_df
+
+# Make a vector of the various synonyms your species is known by
+spp_synonyms <- c(spp_name, spp_synonyms_df$syn_name)
+spp_synonyms
+
+# Get taxonomic classification information for your species
+taxonomic_info_list <- classification(spp_name, db = "itis")
+
+# Turn into a nice dataframe
+taxonomic_info_df <- do.call(rbind, taxonomic_info_list)
+
+taxonomic_info_df
+
+```
+
+#rredlist
+
+The rredlist package talks to the IUCN Red List website and allows you to find
+information on current and past conservation status of species, taxonomic info,
+the reason they were listed, and their key threats. 
+
+Global in scope.
+
+Does not include spatial information, and you need to have obtained an access
+token from the red list website and stored it. I can help you do this if you get
+stuck.
+
+IUCN: Request an API key at http://apiv3.iucnredlist.org/api/v3/token. Note it 
+can take a few days to receive.
+
+Post showing how to save the key:https://stackoverflow.com/questions/45185852/accessing-an-api-with-r
+
+"You should also put your API key in something like an environment variable so 
+it never ends up in scripts or GitHub repo commits. Use ~/.Renviron (make a 
+single line entry for IUCN_REDLIST_KEY=your_key and then restart R)."
+
+Citation:
+Chamberlain S. 2018. rredlist: 'IUCN' Red List Client
+
+```{r rredlist}
+# Command to add your token (will open your .environ file, store as 
+# IUCN_REDLIST_KEY = "your token")
+
+usethis::edit_r_environ()
+
+red_list_synonyms <- rl_synonyms(spp_name)[["result"]]
+red_list_synonyms
+
+spp_red_list_info <- rl_search(spp_name)[[2]]
+
+spp_conservation_status <- spp_red_list_info %>% 
+                           select(category)
+
+spp_conservation_status
+
+spp_red_list_history <- rl_history(spp_name)[[2]] %>% 
+                        arrange(year)
+
+spp_red_list_history
+
+spp_red_list_threats <- rl_threats(spp_name)[[2]] 
+
+spp_red_list_threats
+  
+```
+
+# rgbif
+
+GBIF (Global Biodiversity Information Facility) is an online database of species
+occurrence records. It is global in scope, and has been assembled from a vast
+number of field observations, of varying age and quality.
+
+Global in scope and contains occurrences from multiple taxa.
+
+Recommended to do some quality checking of your outputs.  If high accuracy is 
+important (eg for SDMs or occupancy modeling or abundance), you may be better 
+off searching for a more carefully curated database specific to your species 
+and/or location.
+
+Don't think it requires an API to access.
+
+Citation: Chamberlain S, Barve V, Mcglinn D, Oldoni D, Desmet P, Geffert L, 
+Ram K. 2020. rgbif: Interface to the Global Biodiversity Information Facility API
+
+```{r rgbif}
+
+# Get an identifying key for your species
+
+occ_key <- name_suggest(spp_name)
+
+# extract it from the output list
+
+keys <- occ_key[["data"]]$key[1]
+
+# Check it is a single number (or multiple numbers if searching multiple spp)
+keys
+
+# Download data from GBIF database. Note 'limit' sets the number of observations
+# you want to download. A lower number will be quicker but incomplete. Larger
+# numbers are obviously more complete but take longer. I think it downloads most
+# recent first, then works backwards.
+
+# You might want to check how many observations there are in total first so
+# you know how incomplete your set will be if you set the limit lower
+
+spp_occ_count <- occ_count(keys)
+spp_occ_count
+
+# Get your occurrences
+gbif_data_list <- occ_search(keys, limit = 200) 
+
+# Get taxonomic info (less detailed than the taxize version)
+names(gbif_data_list)
+
+gbif_taxonomic_info <- gbif_data_list[["hierarchy"]][[1]]
+
+gbif_taxonomic_info
+
+# Get the observations and their associated attributes
+
+gbif_data <- gbif_data_list[["data"]]
+
+# Filter whatever columns you care about
+
+gbif_occurrences <- gbif_data_list[["data"]] %>%
+        select(genericName, specificEpithet, 
+               decimalLatitude, 
+               decimalLongitude,
+               lifeStage, iucnRedListCategory,year) 
+
+# Have a look
+head(gbif_occurrences)
+
+# Generate citations (these are for the individual field datasets)
+rgbif_citations <- gbif_citation(gbif_data_list)
+rgbif_citations[[1]]
+
+```
+
+# galah
+
+Galah is the package for accessing the Atlas of Living Australia, another
+online database of species occurrence records. I *think* it is limited to species
+found in Australia but I'm not sure. It can give you occurrence points outside
+Australia too though.
+
+Doesn't require an API but you do need to have registered an account on the
+ALA website, and then configure below with your registered email address.
+
+Probably the easiest package to use and I think at least some of the species data
+has undergone decent quality control but still always good to check outputs.
+
+Citation:
+Stevenson M, Westgate M, Newman P (2021). galah: Atlas of Living Australia (ALA) Data and Resources in R. R package version 1.2.0, https://CRAN.R-project.org/package=galah.
+
+```{r galah}
+
+# Configure your email
+
+ala_config(email = "ssteven@deakin.edu.au")
+
+# Get the species info you need to access the database
+ala_spp <- select_taxa(spp_name)
+
+# Get occurrence data for your species. You can filter by various geographic
+# subunits including country and stateProvince. Adding the 'mint_doi' argument
+# means you can also generate a citation for your data, recommended.
+
+occ <- ala_occurrences(ala_spp,
+                       select_filters(country = "Australia"),
+                       mint_doi = TRUE)
+
+# if you want to save
+# write.csv(occ, file.path(basedir, "spp_occurrences.csv"))
+
+# Generate a citation
+citation <- ala_citation(occ)
+citation
+
+```
+
+# plotting occurrence data
+
+You can plot the data which is pretty fun. Some very basic code for converting
+the occurrence data into spatial objects and making a basic map below. This is
+good for doing a quick check that your data looks sensible. Will need better
+code or export the shapefiles for GIS to make a publication ready map though.
+
+```{r plot gbif}
+
+# Remove incomplete lines
+gbif_occurrences_complete <- gbif_occurrences[!with(gbif_occurrences,is.na(decimalLatitude)&is.na(decimalLatitude)),]
+
+# Convert to an sf object
+gbif_coords_shp <- st_as_sf(gbif_occurrences_complete, 
+                            coords = c("decimalLongitude",
+                                       "decimalLatitude"),
+                       crs = 4326)
+
+# Save your shapefile
+st_write(gbif_coords_shp, "gbif_occcurrences.shp")
+
+# Download a polygon using the rnatural earth package
+
+world_shp <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Plot the points on the polygon
+ggplot() +
+    geom_sf(data = world_shp) +
+    geom_sf(data = gbif_coords_shp, aes(col = lifeStage)) + # colour by lifestage
+    scale_color_viridis_d(option = "viridis", na.value = "hot pink")
+
+
+```
+
+
+```{r plot ala}
+
+# ALA data 
+# Remove incomplete lines
+occ <- occ[!with(occ,is.na(decimalLatitude)& is.na(decimalLatitude)),]
+
+# convert to sf object
+occ_coords_shp <- st_as_sf(occ, coords = c("decimalLongitude",
+                                       "decimalLatitude"),
+                       crs = 4326)
+
+# Remove unneccessary attributes if you like (good if you have lots of observations)
+occ_coords_shp <- occ_coords_shp %>%
+                  dplyr::select(scientificName, geometry)
+
+# Download a polygon, this time lets just get australia
+
+aus_shp <- ne_countries(scale = "medium", returnclass = "sf", country = "Australia")
+
+# Plot the points over the polygon
+ggplot() +
+    geom_sf(data = aus_shp) +
+    geom_sf(data = occ_coords_shp, col = "hot pink")
+
+
+```
+
+
+# fishbase
+
+I ran out of time to figure out the fishbase package!  The advantage of using 
+fishbase is that it appears to have a lot of additional attributes you won't
+get from the other databases, including species trait information and ecosystem
+type.  We can come back to it another day.
+
+Citation:
+Boettiger, C., Chamberlain, S., Lang, D. T., Wainwright, P., & 
+Boettiger, M. C. (2021). Package ‘rfishbase’.
+
+```{r fishbase}
+
+# no code sorry :(
+
+```
+
+
+
