@@ -8,6 +8,11 @@ output:
 self_contained: yes
 ---
 
+# Notes
+
+This tutorial is inspired by the datacamp functions module. I'd suggest going there
+for a really in depth look at functions in R.
+
 # Benefits of writing functions
 
 - readability
